@@ -8,28 +8,25 @@ import okio.Path.Companion.toPath
 // R1. Linha comando
 // NEW, PLAY <pos>, EXIT
 private const val EMPTY: Char = ' '
-private const val FILENAME: String = "galo.txt"
+private const val KEY: String = "jogo.txt"
 
+// GAME CLASSS
 data class Game (
 
     val first : Char = 'X',
     val turn : Char = first,
-
-
+    // BOARD
     val board: List<Char> = listOf(
         EMPTY, EMPTY, EMPTY, // 0, 1, 2
         EMPTY, EMPTY, EMPTY, // 3, 4, 5
         EMPTY, EMPTY, EMPTY  // 6, 7, 8
     )
-
-
-
 )
 
-// criar novo JOGO
+// NEW
 fun Game.new () = Game ()
 
-// print do tabuleiro
+// SHOW
 fun Game.show() {
 
     println("------------")
@@ -47,14 +44,17 @@ fun Game.show() {
     println("------------")
 }
 
+// NEXT PLAYER
 fun Game.nexPlayer() : Char {
     if (turn=='X') return 'O' else return 'X'
 }
 
+// CAN PLAY
 fun Game.canPlay(pos : Int) : Boolean {
     return (board[pos] == EMPTY)
 }
 
+// PLAY
 fun Game.play(pos : Int) : Game  {
 
     var next = turn
@@ -66,40 +66,27 @@ fun Game.play(pos : Int) : Game  {
 
 }
 
-
-fun Game.serialize(): String {
-    return "$first|$turn|$board"
-}
-
-fun Game.deserialize() : Game {
-    return Game()
-}
-
-fun Game.save() {
-    val path = FILENAME.toPath()
-    val me = this
-    with (path) {
-        FileSystem.SYSTEM.write(this,false) {
-            writeUtf8(me.serialize() )
-        }
-    }
-}
-
-fun Game.load() {
-    val path = FILENAME.toPath()
-
-    val bytes: ByteArray = FileSystem.SYSTEM.read(path) {
-        readByteArray()
-    }
-
-    println("Lidos ${bytes.size} bytes")
-}
-
+// WINNER
 fun Game.isWinner() : Boolean {
     //
     return (board[0] == board[1] && board[0] == board[2] && board[0] != EMPTY)
 
 }
+
+// -------------- NEXT CLASS --------------
+
+// SAVE
+fun Game.save() {
+    val store : IStorage = FileStorage(GameSerializer)
+    store.create(KEY, this)
+}
+
+// LOAD
+fun Game.load() : Game? {
+    val store : IStorage = FileStorage(GameSerializer)
+    return store.read(KEY)
+}
+
 
 
 fun main() {
@@ -117,13 +104,15 @@ fun main() {
         // Parse command
         val command =cmd!![0]
         when (command) {
-
+            "LOAD" -> {
+                println("COMMAND ISSUED: $command")
+                game = game.new()
+                game = game.load()!!
+            }
             "NEW" -> {
                 println("COMMAND ISSUED: $command")
                 game = game.new()
                 game.show()
-                game.save()
-                game.load()
             }
             "PLAY" -> {
                 val pos =cmd!![1].toInt()
@@ -133,6 +122,7 @@ fun main() {
                 if (pos >=0 && pos <=8 && game.canPlay(pos)) {
                     game = game.play(pos)
                     game.show()
+                    game.save()
                 }
             }
             "EXIT" -> {
