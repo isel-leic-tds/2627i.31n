@@ -2,7 +2,7 @@ package pt.isel.tds2627
 
 import okio.*
 import okio.Path.Companion.toPath
-
+import org.bson.codecs.pojo.annotations.BsonProperty
 
 
 // R1. Linha comando
@@ -12,7 +12,6 @@ private const val KEY: String = "jogo.txt"
 
 // GAME CLASSS
 data class Game (
-
     val first : Char = 'X',
     val turn : Char = first,
     // BOARD
@@ -77,8 +76,11 @@ fun Game.isWinner() : Boolean {
 
 // SAVE
 fun Game.save() {
-    val store : IStorage = FileStorage(GameSerializer)
+    val store : IStorage = AtlasStorage()
     store.create(KEY, this)
+
+    // DUMMY
+
 }
 
 // LOAD
@@ -87,6 +89,12 @@ fun Game.load() : Game? {
     return store.read(KEY)
 }
 
+
+data class Student(
+    @BsonProperty("_id") val number: Int,
+    val name: String,
+    val grade: Double
+)
 
 
 fun main() {
