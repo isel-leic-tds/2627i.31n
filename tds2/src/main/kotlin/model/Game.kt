@@ -1,7 +1,5 @@
 package pt.isel.tds2627.model
 
-private const val EMPTY = ' '
-
 const val BOARD_SIZE = 3
 const val BOARD_CELLS = BOARD_SIZE * BOARD_SIZE
 
