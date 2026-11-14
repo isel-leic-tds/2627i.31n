@@ -4,6 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -12,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.VerticalAlignmentLine
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
@@ -37,14 +39,13 @@ import pt.isel.tds2627.resources.*
 fun App() {
     var player by remember { mutableStateOf(Player.X) }
     MaterialTheme {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            PlayerView(25.dp, player)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            PlayerView(250.dp, player)
             Button(
                 onClick = { player = player.other }
             ) {
                 Text("Other player")
             }
-            PlayerView(25.dp, player)
         }
     }
 }
@@ -76,7 +77,7 @@ fun PlayerPreview() {
 }
 
 
-fun main() = application {
+fun main2() = application {
     Window(
         title = "Jogo do Galo",
         state = WindowState(size = DpSize.Unspecified),
@@ -88,7 +89,7 @@ fun main() = application {
 
 
 
-fun main2() = MongoDriver("galo").use {
+fun main() = MongoDriver("galo").use {
     var game = Game()
 
     val commands = getCommands(MongoStorage("games", it, GameSerializer))
@@ -104,7 +105,7 @@ fun main2() = MongoDriver("galo").use {
         else try {
             game = cmd.execute(args, game)
             if (cmd.isToFinish) break
-            game?.show()
+            game.show()
         } catch (e: IllegalStateException) {
             println(e.message)
         } catch (e: IllegalArgumentException) {
