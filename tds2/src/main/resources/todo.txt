@@ -1,0 +1,72 @@
+package pt.isel.tds2627
+
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.window.*
+
+
+data class Student (
+    val name: String,
+    val age: Int
+)
+
+@Composable
+private fun App(
+    student: Student,
+    getStudent: () -> Unit
+) {
+
+        var name by remember { mutableStateOf("") }
+        var age by remember { mutableStateOf(0) }
+
+
+    MaterialTheme {
+        NavigationBar {
+            Button(
+                onClick = {
+                    getStudent()
+                    name = student.name
+                    age = student.age
+                }
+            )
+            {
+                Text("Name: $name; Age: $age")
+            }
+        }
+
+    }
+}
+
+
+
+//TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
+// click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
+fun main() {
+    val name = "Kotlin"
+    //TIP Press <shortcut actionId="ShowIntentionActions"/> with your caret at the highlighted text
+    // to see how IntelliJ IDEA suggests fixing it.
+    println("Hello, " + name + "!")
+    val aluno = Student(name="Jose", age=32)
+
+    // 2. Arranca a interface e passa-lhe o que precisa
+    application {
+        Window(onCloseRequest = ::exitApplication, title = "TDS2") {
+            App(
+                aluno,
+                {
+
+                    println("Aluno del Aluno del Aluno")
+                }
+                )
+        }
+    }
+
+    MongoDriver(nameDb = "test").use {
+        val docs = it.getCollection<Student>("student")
+        docs.apply {
+            check(insertDocument(aluno))
+        }
+    }
+
+
+}

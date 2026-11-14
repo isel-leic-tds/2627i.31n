@@ -3,6 +3,7 @@ package pt.isel.tds2627
 import okio.*
 import okio.Path.Companion.toPath
 import org.bson.codecs.pojo.annotations.BsonProperty
+import kotlin.system.exitProcess
 
 
 // R1. Linha comando
@@ -98,6 +99,26 @@ data class Student(
 
 
 fun main() {
+
+    println("Teste MongoDB")
+
+    val aluno = Student(123, "Aluno", 15.0)
+
+
+    MongoDriver(nameDb = "test").use {
+        val docs = it.getCollection<Student>("student")
+        docs.apply {
+            check(insertDocument(aluno))
+        }
+    }
+
+
+
+
+    exitProcess(0  )
+
+
+
     var game : Game = Game()
 
 
