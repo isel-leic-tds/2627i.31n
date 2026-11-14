@@ -1,0 +1,4 @@
+O
+0:O 1:X 4:O 3:X 8:O
+Win:O
+X=0 O=1 null=0
