@@ -25,58 +25,6 @@ private val Play = Command("<position>") { args, game ->
 }
 
 
-typealias GameStorage = Storage<String, Game>
-
-open class Clash(val gs: GameStorage)
-
-
-class ClashRun(
-    gs: GameStorage,
-    val id: Name,
-    val sidePlayer: Player,
-    val game: Game
-) : Clash(gs)
-
-
-val ClashRun.canNew get() = sidePlayer == when (game.state) {
-    is Run -> game.state.turn
-    else -> game.first.other
-}
-
-private fun Clash.runOper(actions: ClashRun.()->Game): Clash {
-    check(this is ClashRun) { "Clash not started" }
-    return ClashRun(gs, id, sidePlayer, actions())
-}
-fun Clash.deleteIfIsOwner() {
-    if (this is ClashRun && sidePlayer==Player.X) gs.delete(id.toString())
-}
-
-fun Clash.start(name: Name) = ClashRun(gs, name, Player.X, Game().also {
-    gs.create(name.toString(), it)
-    deleteIfIsOwner()
-})
-
-
-fun Clash.join(name: Name) = gs.read(name.toString())?.let {
-    deleteIfIsOwner()
-    ClashRun(gs, name, Player.O, it)
-} ?: error("Clash $name not found")
-
-fun Clash.play(pos: Position) = runOper { game.play(pos).also {
-    check((game.state as Run).turn == sidePlayer) {"Not your turn"}
-    gs.update(id.toString(),it)
-}}
-
-fun Clash.new() = runOper {
-    check(canNew) { "Cannot create a new board" }
-    game.new().also { gs.update(id.toString(),it) }
-}
-
-
-fun Clash.refresh() = runOper { (gs.read(id.toString()) as Game).also {
-    check(game!=it) { "No changes" }
-} }
-
 
 
 
@@ -86,10 +34,10 @@ fun getCommands(st: GameStorage): Map<String, Command> = mapOf(
     "EXIT" to Command(isToFinish = true),
     "SCORE" to Command { _, game -> game.apply { showScore() } },
     "SAVE" to storageCommand { game, name -> game.also {
-        st.create(name, game)
+        st.create(Name(name), game)
     } },
     "LOAD" to storageCommand { _, name ->
-        checkNotNull(st.read(name)) { "Game $name not found" }
+        checkNotNull(st.read(Name(name))) { "Game $name not found" }
     },
     )
 

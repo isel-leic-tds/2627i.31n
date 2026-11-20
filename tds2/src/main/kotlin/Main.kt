@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -44,6 +46,7 @@ import pt.isel.tds2627.storage.MongoStorage
 import composeResources.*
 import org.jetbrains.compose.resources.painterResource
 import pt.isel.tds2627.model.AppVMClashMongo
+import pt.isel.tds2627.model.AppVMClashTextFile
 import pt.isel.tds2627.model.BOARD_SIZE
 import pt.isel.tds2627.model.Board
 import pt.isel.tds2627.model.Draw
@@ -53,6 +56,7 @@ import pt.isel.tds2627.model.Position
 import pt.isel.tds2627.model.Run
 import pt.isel.tds2627.model.Score
 import pt.isel.tds2627.model.Win
+import pt.isel.tds2627.model.new
 import pt.isel.tds2627.model.play
 import pt.isel.tds2627.resources.Res
 import pt.isel.tds2627.resources.*
@@ -68,7 +72,7 @@ val STATUS_HEIGHT = 70.dp  // Height of the status bar
 
 
 
-
+// zz1 20/11
 @Composable
 fun StartOrJoinDialog(
     type: InputName, onCancel: ()->Unit, onAction: (Name)->Unit
@@ -92,10 +96,11 @@ fun StartOrJoinDialog(
             TextButton(onClick = onCancel){ Text("cancel") }
         }  )   }
 
-// zz 20/11
+// zz2 20/11
 @Composable
 private fun FrameWindowScope.App(onExit: ()-> Unit) {
-    val vm = remember { AppVMClashMongo() /* AppVMClashTextFile() */ }
+    val cs = rememberCoroutineScope()
+    val vm = remember { AppVMClashMongo().apply { scope = cs } }
     MenuBar { Menu("Game") {
         Item("Start game", onClick = vm::start)
         Item("Join game", onClick = vm::join)
@@ -116,8 +121,37 @@ private fun FrameWindowScope.App(onExit: ()-> Unit) {
         vm.inputName?.let { StartOrJoinDialog(it,
             onCancel = vm::cancelInput, onAction= vm::startOrJoin
         ) }
+        if (vm.isWaiting)
+            waitingIndicator()
     }
+
 }
+
+
+@Composable
+fun waitingIndicator() = CircularProgressIndicator(
+    Modifier.fillMaxSize().padding(30.dp),
+    strokeWidth = 15.dp
+)
+
+
+@Composable
+fun ScoreDialog(score: Score, onClose: ()->Unit) = AlertDialog(
+    onDismissRequest = onClose,
+    title = { Text("Score") },
+    text = { Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
+        val modifier = Modifier.padding(vertical = 10.dp)
+        Column { Player.entries.forEach { player ->
+            Row(modifier, verticalAlignment= Alignment.CenterVertically) {
+                Cell(Modifier.size(20.dp), player)
+                Text(" - ${score[player]}")
+            }   }   }
+        Text("Draws - ${score[null]}", modifier)
+    }   },
+    confirmButton = { TextButton(onClick = onClose){ Text("Close") } },
+    modifier = Modifier.fillMaxWidth(0.4f)
+)
+
 
 
 
@@ -183,14 +217,14 @@ fun ScoreInfo(score: Score, name: Name, onClose: ()->Unit) =
 
 @Composable
 fun App() {
-    //var player by remember { mutableStateOf(Player.X) }
-
+    var player by remember { mutableStateOf(Player.X) }
     var game by remember { mutableStateOf(Game()) }
     MaterialTheme {
         Column {
             Board(game.board) { pos -> game = game.play(pos) }
             StatusBar(game.state)
         }
+
     }
 
 
@@ -273,16 +307,24 @@ fun PlayerPreview() {
 }
 
 
-fun main() = application {
+fun main() = application(exitProcessOnExit = false) {
     Window(
         title = "Jogo do Galo",
         state = WindowState(size = DpSize.Unspecified),
-        onCloseRequest = ::exitApplication,
-        icon = painterResource(Res.drawable.cross)
-    ) { App() }
+        onCloseRequest = { }, // Do not exit on close request
+        resizable = false,
+    ) {
+        MenuActions(onExit = ::exitApplication)
+        App(onExit = ::exitApplication)
+    }
 }
 
-
+@Composable
+fun FrameWindowScope.MenuActions(onExit: ()-> Unit) {
+    MenuBar { Menu("Game") {
+        Item("New board") { println("New Board") }
+        Item("Exit", onClick = onExit)
+    }  }  }
 
 
 fun main3() = MongoDriver("galo").use {

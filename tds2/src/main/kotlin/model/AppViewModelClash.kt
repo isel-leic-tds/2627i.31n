@@ -3,21 +3,17 @@ package pt.isel.tds2627.model
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.*
 import pt.isel.tds2627.InputName
-import pt.isel.tds2627.console.Clash
-import pt.isel.tds2627.console.ClashRun
-import pt.isel.tds2627.console.GameStorage
-import pt.isel.tds2627.console.canNew
-import pt.isel.tds2627.console.deleteIfIsOwner
-import pt.isel.tds2627.console.new
-import pt.isel.tds2627.console.play
-import pt.isel.tds2627.console.*
+
 import pt.isel.tds2627.data.MongoDriver
 import pt.isel.tds2627.storage.MongoStorage
 import pt.isel.tds2627.storage.TextFileStorage
+import kotlin.time.Duration.Companion.seconds
 
 
 const val BaseName = "games" // Base name for Clash games
+
 
 open class AppViewModelClash(storage: GameStorage) {
     var clash by mutableStateOf(Clash(storage))  // Model state
@@ -26,7 +22,7 @@ open class AppViewModelClash(storage: GameStorage) {
     val run get() = clash as ClashRun
     val game get() = run.game
     val newAvailable get() = isRun && run.canNew
-
+    lateinit var scope : CoroutineScope
 
     private fun exec(fx: Clash.()->Clash) = // Executes a Clash function
         try { clash = clash.fx() }       // and updates the Clash state
@@ -37,16 +33,38 @@ open class AppViewModelClash(storage: GameStorage) {
 
     fun newBoard() = exec(Clash::new)  // Create a new game board
 
+    private fun waitForOtherSide() {
+        if (run.canNew) return
+        waitingJob = scope.launch {
+            do {
+                delay(3.seconds)
+                try { clash = clash.refresh() }
+                catch (e: NoChangesException) { /* Ignore */ }
+                catch (e: Exception) {
+                    errorMessage = e.message
+                    if (e is GameDeletedException) clash = Clash(clash.gs)
+                }
+            } while (!run.canNew)
+            waitingJob = null
+        }
 
-    fun play(pos: Position) = exec{
-        play(pos)
     }
+
+
+    fun play(pos: Position) {
+        exec { play(pos) }
+        waitForOtherSide()
+    }
+
+
 
 
     fun refresh() = exec(Clash::refresh)
 
 
-    open fun exit() { clash.deleteIfIsOwner() }
+    open fun exit() { clash.deleteIfIsOwner()
+        cancelWaiting()
+    }
 
 
     var inputName by mutableStateOf<InputName?>(null) //StartOrJoinDialog
@@ -57,10 +75,23 @@ open class AppViewModelClash(storage: GameStorage) {
     fun start() { inputName = InputName.ForStart }
     fun join() { inputName = InputName.ForJoin }
     fun startOrJoin(name: Name) {
+        cancelWaiting()
         if (inputName == InputName.ForStart) exec{ start(name)}
         else exec { join(name) }
         cancelInput()
+        waitForOtherSide()
     }
+    private var waitingJob by mutableStateOf<Job?>(null)
+    val isWaiting: Boolean get() = waitingJob != null
+
+    private fun cancelWaiting() {
+        waitingJob?.cancel()
+        waitingJob = null
+    }
+
+
+
+
     // Error dialog management
     var errorMessage by mutableStateOf<String?>(null)
         private set
@@ -73,6 +104,8 @@ open class AppViewModelClash(storage: GameStorage) {
 }
 
 
+class NoChangesException : IllegalStateException("No changes")
+class GameDeletedException : IllegalStateException("Game deleted")
 
 
 class AppVMClashTextFile : AppViewModelClash(

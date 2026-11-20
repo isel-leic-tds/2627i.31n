@@ -47,6 +47,14 @@ fun Clash.new() = runOper {
     check(canNew) { "Cannot create a new board" }
     game.new().also { gs.update(id,it) }
 }
+/*
 fun Clash.refresh() = runOper { (gs.read(id) as Game).also {
     check(game!=it) { "No changes" }
 } }
+*/
+
+
+fun Clash.refresh() = runOper {
+    (gs.read(id) ?: throw GameDeletedException()).also {
+        if (game == it) throw NoChangesException()
+    }  }
